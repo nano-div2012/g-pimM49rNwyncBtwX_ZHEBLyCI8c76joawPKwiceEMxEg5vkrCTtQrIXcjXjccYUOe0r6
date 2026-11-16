@@ -1,11 +1,155 @@
 <!DOCTYPE html>
-<html>
+<html lang="id">
 <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
-    <meta http-equiv="Refresh" content="0; url='https://example.com/'" />
-    <script>window.location.replace("https://example.com/");</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Tembak Musuh</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{background:#0a0f2e;color:white;font-family:Arial,sans-serif;overflow:hidden;height:100vh;touch-action:none}
+#header{display:flex;justify-content:space-between;padding:12px 16px;background:#111c4d;font-weight:bold}
+#header span{background:#ffca28;color:#000;padding:4px 10px;border-radius:20px}
+#game{position:relative;width:100%;height:calc(100vh - 100px);overflow:hidden;background:linear-gradient(#0a0f2e,#1a237e,#000)}
+#player{position:absolute;bottom:15px;left:50%;transform:translateX(-50%);font-size:55px;z-index:5;filter:drop-shadow(0 0 10px #4fc3f7)}
+.enemy{position:absolute;font-size:42px;z-index:3}
+.bullet{position:absolute;font-size:22px;z-index:4}
+.boom{position:absolute;font-size:35px;pointer-events:none;animation:boom .35s forwards;z-index:6}
+@keyframes boom{to{transform:scale(2);opacity:0}}
+#overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,.8);z-index:10;text-align:center;padding:20px}
+#overlay h1{font-size:32px;margin-bottom:10px}
+#overlay p{opacity:.85;line-height:1.6;margin-bottom:20px}
+button{background:#ffca28;color:#000;border:none;padding:14px 30px;border-radius:30px;font-size:18px;font-weight:bold;cursor:pointer;box-shadow:0 5px 0 #c49000}
+button:active{transform:translateY(3px)}
+#controls{height:50px;display:flex;gap:10px;padding:8px}
+#controls button{flex:1;background:#283593;color:white;box-shadow:none;padding:10px;font-size:20px}
+#footer{text-align:center;font-size:11px;opacity:.5;padding:2px}
+</style>
 </head>
-<body style="margin:0;padding:0;background-color:#ffffff;display:flex;justify-content:center;align-items:center;height:100vh;font-family:sans-serif;">
-    Redirecting...
+<body>
+<div id="header">
+  <div>SKOR: <span id="skor">0</span></div>
+  <div>NYAWA: <span id="nyawa">❤️❤️❤️</span></div>
+  <div>LEVEL: <span id="level">1</span></div>
+</div>
+
+<div id="game">
+  <div id="player">🚀</div>
+  <div id="overlay">
+    <h1>🔫 TEMBAK MUSUH 🔫</h1>
+    <p>Geser pesawat pake jari / tombol bawah.<br>Tembak otomatis jalan terus.<br>Jangan sampai musuh lolos ke bawah!</p>
+    <button onclick="mulai()">MULAI TEMBAK</button>
+  </div>
+</div>
+
+<div id="controls">
+  <button onclick="gerakKiri()">⬅️</button>
+  <button onclick="tembakBanyak()">💥 TEMBAK</button>
+  <button onclick="gerakKanan()">➡️</button>
+</div>
+<div id="footer">Game by Bid - Penembak Handal</div>
+
+<script>
+let skor=0, nyawa=3, level=1, jalan=false;
+let skorEl=document.getElementById('skor');
+let nyawaEl=document.getElementById('nyawa');
+let levelEl=document.getElementById('level');
+let game=document.getElementById('game');
+let player=document.getElementById('player');
+let overlay=document.getElementById('overlay');
+let px=50; // posisi player %
+
+function mulai(){
+  skor=0; nyawa=3; level=1; px=50; jalan=true;
+  skorEl.textContent=0; nyawaEl.textContent='❤️❤️❤️'; levelEl.textContent=1;
+  overlay.style.display='none';
+  document.querySelectorAll('.enemy,.bullet').forEach(e=>e.remove());
+  player.style.left=px+'%';
+  setInterval(spawnMusuh, 900);
+  setInterval(autoTembak, 280);
+  requestAnimationFrame(loop);
+}
+
+function gerakKiri(){ px=Math.max(5, px-10); player.style.left=px+'%'; }
+function gerakKanan(){ px=Math.min(92, px+10); player.style.left=px+'%'; }
+
+// geser pake jari
+game.addEventListener('touchmove', e=>{
+  let rect=game.getBoundingClientRect();
+  let x=e.touches[0].clientX - rect.left;
+  px=(x/rect.width)*100;
+  px=Math.max(5, Math.min(92, px));
+  player.style.left=px+'%';
+});
+
+function spawnMusuh(){
+  if(!jalan) return;
+  let musuh=['👾','👽','🛸','💀','🤖'];
+  let e=document.createElement('div');
+  e.className='enemy';
+  e.textContent=musuh[Math.floor(Math.random()*musuh.length)];
+  e.style.left=Math.random()*85+'%';
+  e.style.top='-40px';
+  game.appendChild(e);
+}
+
+function autoTembak(){
+  if(!jalan) return;
+  tembak();
+}
+function tembakBanyak(){
+  if(!jalan) return;
+  tembak(); tembak(); tembak();
+}
+function tembak(){
+  let b=document.createElement('div');
+  b.className='bullet'; b.textContent='🔥';
+  b.style.left=px+'%';
+  b.style.bottom='75px';
+  game.appendChild(b);
+}
+
+function loop(){
+  if(!jalan) return;
+  // peluru naik
+  document.querySelectorAll('.bullet').forEach(b=>{
+    let bottom=parseInt(b.style.bottom)||75;
+    bottom+=12; b.style.bottom=bottom+'px';
+    if(bottom>game.clientHeight) b.remove();
+  });
+  // musuh turun
+  document.querySelectorAll('.enemy').forEach(m=>{
+    let top=parseInt(m.style.top)||0;
+    top+=2 + level*0.4;
+    m.style.top=top+'px';
+    // cek kena peluru
+    document.querySelectorAll('.bullet').forEach(b=>{
+      let bx=parseFloat(b.style.left), mx=parseFloat(m.style.left);
+      let by=game.clientHeight - (parseInt(b.style.bottom)||0);
+      if(Math.abs(bx-mx)<7 && Math.abs(by - top)<35){
+        let boom=document.createElement('div');
+        boom.className='boom'; boom.textContent='💥';
+        boom.style.left=m.style.left; boom.style.top=m.style.top;
+        game.appendChild(boom); setTimeout(()=>boom.remove(),350);
+        m.remove(); b.remove();
+        skor+=20; skorEl.textContent=skor;
+        if(skor%200==0){ level++; levelEl.textContent=level; }
+      }
+    });
+    // lolos ke bawah
+    if(top > game.clientHeight - 80){
+      m.remove();
+      nyawa--; nyawaEl.textContent='❤️'.repeat(Math.max(nyawa,0));
+      if(nyawa<=0) gameOver();
+    }
+  });
+  requestAnimationFrame(loop);
+}
+
+function gameOver(){
+  jalan=false;
+  overlay.style.display='flex';
+  overlay.innerHTML=`<h1>💀 GAME OVER 💀</h1><p>Skor akhir kamu: <b>${skor}</b><br>Level: ${level}<br>Bid, musuhnya menang nih!</p><button onclick="mulai()">MAIN LAGI</button>`;
+}
+</script>
 </body>
 </html>
